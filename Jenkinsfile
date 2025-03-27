@@ -10,6 +10,7 @@ pipeline {
     environment {
         AWS_ACCESS_KEY = credentials('AWS_ACCESS')
         AWS_SECRET_KEY = credentials('AWS_SECRET')
+        SSH_PRIVATE_KEY_PATH = "~/.ssh/mujahed.pem"  // Path to your private key
     }
 
     stages {
@@ -30,20 +31,20 @@ pipeline {
             }
         }
         
-        stage('Generate Ansible Inventory') {
+         stage('Generate Inventory') {
             steps {
                 script {
-                    sh '''
-                    
+                    // Generate the inventory for all servers (build_server, tomcat_server, artifact_server)
+                    sh """
                     echo "[build_server]" > inventory
-                    echo "$(terraform output -raw build_server_ip) ansible_user=ubuntu ansible_ssh_private_key_file=~/.ssh/mujahed.pem ansible_ssh_common_args='-o StrictHostKeyChecking=no'" >> inventory
+                    echo "\$(terraform output -raw build_server_ip) ansible_user=ubuntu ansible_ssh_private_key_file=${SSH_PRIVATE_KEY_PATH} ansible_ssh_common_args='-o StrictHostKeyChecking=no'" >> inventory
 
                     echo "[tomcat_server]" >> inventory
-                    echo "$(terraform output -raw tomcat_server_ip) ansible_user=ubuntu ansible_ssh_private_key_file=~/.ssh/mujahed.pem ansible_ssh_common_args='-o StrictHostKeyChecking=no'" >> inventory
+                    echo "\$(terraform output -raw tomcat_server_ip) ansible_user=ubuntu ansible_ssh_private_key_file=${SSH_PRIVATE_KEY_PATH} ansible_ssh_common_args='-o StrictHostKeyChecking=no'" >> inventory
 
                     echo "[artifact_server]" >> inventory
-                    echo "$(terraform output -raw artifact_server_ip) ansible_user=ubuntu ansible_ssh_private_key_file=~/.ssh/mujahed.pem ansible_ssh_common_args='-o StrictHostKeyChecking=no'" >> inventory
-                    '''
+                    echo "\$(terraform output -raw artifact_server_ip) ansible_user=ubuntu ansible_ssh_private_key_file=${SSH_PRIVATE_KEY_PATH} ansible_ssh_common_args='-o StrictHostKeyChecking=no'" >> inventory
+                    """
                 }
             }
         }
