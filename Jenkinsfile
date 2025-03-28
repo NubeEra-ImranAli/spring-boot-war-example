@@ -54,7 +54,7 @@ pipeline {
                 script {
                     sh '''
                     pwd
-                    ansible -i inventory all -m ping
+                    ansible -i inventory all -m ping -vvvv
                     '''
                 }
             }
