@@ -54,7 +54,7 @@ pipeline {
                 script {
                     sh '''
                     pwd
-                    ansible -i inventory all -m ping -vvvv
+                    ansible -i inventory all -m ping -vvvv --private-key /var/lib/jenkins/.ssh/mujahed.pem
                     '''
                 }
             }
