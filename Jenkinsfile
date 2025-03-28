@@ -53,6 +53,7 @@ pipeline {
             steps {
                 script {
                     sh '''
+                    pwd
                     ansible -i inventory all -m ping
                     '''
                 }
