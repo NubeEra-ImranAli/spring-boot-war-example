@@ -31,6 +31,22 @@ pipeline {
             }
         }
         
+        stage('Wait for EC2 Instances to be Ready') {
+            steps {
+                script {
+                    // Wait for the EC2 instances to be fully running using the AWS CLI
+                    INSTANCE_IDS=$(terraform output -raw build_server_id) # Use Terraform to get the instance IDs
+                    INSTANCE_IDS+=$(terraform output -raw tomcat_server_id) 
+                    INSTANCE_IDS+=$(terraform output -raw artifact_server_id)
+                    echo "Waiting for EC2 instances to be ready: $INSTANCE_IDS"
+
+                    // Wait for instances to be in the 'running' state
+                    sh '''
+                    aws ec2 wait instance-running --instance-ids $INSTANCE_IDS
+                    '''
+                }
+            }
+        }
          stage('Generate Inventory') {
             steps {
                 script {
@@ -54,7 +70,7 @@ pipeline {
                 script {
                     sh '''
                     pwd
-                    ansible -i inventory all -m ping -vvvv --private-key /var/lib/jenkins/.ssh/mujahed.pem
+                    ansible -i inventory all -m ping
                     '''
                 }
             }
