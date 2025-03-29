@@ -34,19 +34,23 @@ pipeline {
         stage('Wait for EC2 Instances to be Ready') {
             steps {
                 script {
-                    // Wait for the EC2 instances to be fully running using the AWS CLI
-                    INSTANCE_IDS=$(terraform output -raw build_server_id) # Use Terraform to get the instance IDs
-                    INSTANCE_IDS+=$(terraform output -raw tomcat_server_id) 
-                    INSTANCE_IDS+=$(terraform output -raw artifact_server_id)
-                    echo "Waiting for EC2 instances to be ready: $INSTANCE_IDS"
+                    // Fetch instance IDs from Terraform outputs
+                    def buildServerId = sh(script: 'terraform output -raw build_server_id', returnStdout: true).trim()
+                    def tomcatServerId = sh(script: 'terraform output -raw tomcat_server_id', returnStdout: true).trim()
+                    def artifactServerId = sh(script: 'terraform output -raw artifact_server_id', returnStdout: true).trim()
 
-                    // Wait for instances to be in the 'running' state
-                    sh '''
-                    aws ec2 wait instance-running --instance-ids $INSTANCE_IDS
-                    '''
+                    // Create a list of instance IDs
+                    def instanceIds = "${buildServerId} ${tomcatServerId} ${artifactServerId}"
+                    echo "Waiting for EC2 instances to be ready: ${instanceIds}"
+
+                    // Wait for the EC2 instances to be running
+                    sh """
+                    aws ec2 wait instance-running --instance-ids ${instanceIds}
+                    """
                 }
             }
         }
+        
          stage('Generate Inventory') {
             steps {
                 script {
