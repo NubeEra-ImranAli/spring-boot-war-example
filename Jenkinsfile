@@ -10,7 +10,7 @@ pipeline {
     environment {
         AWS_ACCESS_KEY = credentials('AWS_ACCESS')
         AWS_SECRET_KEY = credentials('AWS_SECRET')
-        SSH_PRIVATE_KEY_PATH = "~/.ssh/mujahed.pem"  // Path to your private key
+        SSH_PRIVATE_KEY_PATH = "~/.ssh/mujahed.pub"  // Path to your private key
     }
 
     stages {
