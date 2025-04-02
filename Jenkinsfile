@@ -43,47 +43,47 @@ pipeline {
             }
         }
 
-        stage('Verify Ansible Connectivity') {
-            steps {
-                script {
-                    sh '''
-                    pwd
-                    ansible -i inventory all -m ping
-                    '''
-                }
-            }
-        }
+        // stage('Verify Ansible Connectivity') {
+        //     steps {
+        //         script {
+        //             sh '''
+        //             pwd
+        //             ansible -i inventory all -m ping
+        //             '''
+        //         }
+        //     }
+        // }
 
-        stage('Install Tomcat & Nexus') {
-            steps {
-                script {
-                    sh '''
-                    ansible-playbook -i inventory setup.yml
-                    '''
-                }
-            }
-        }
+        // stage('Install Tomcat & Nexus') {
+        //     steps {
+        //         script {
+        //             sh '''
+        //             ansible-playbook -i inventory setup.yml
+        //             '''
+        //         }
+        //     }
+        // }
 
-        stage('Build Java Application') {
-            steps {
-                script {
-                    sh '''
-                    cd spring-boot-war-example
-                    mvn clean install
-                    '''
-                }
-            }
-        }
+        // stage('Build Java Application') {
+        //     steps {
+        //         script {
+        //             sh '''
+        //             cd spring-boot-war-example
+        //             mvn clean install
+        //             '''
+        //         }
+        //     }
+        // }
 
-        stage('Deploy Java Application') {
-            steps {
-                script {
-                    sh '''
-                    scp -i ~/.ssh/mujahed.pem spring-boot-war-example/target/*.war ubuntu@$(terraform output -raw tomcat_server_ip):/opt/apache-tomcat-9.0.99/webapps/
-                    '''
-                }
-            }
-        }
+        // stage('Deploy Java Application') {
+        //     steps {
+        //         script {
+        //             sh '''
+        //             scp -i ~/.ssh/mujahed.pem spring-boot-war-example/target/*.war ubuntu@$(terraform output -raw tomcat_server_ip):/opt/apache-tomcat-9.0.99/webapps/
+        //             '''
+        //         }
+        //     }
+        // }
     }
 
     post {
