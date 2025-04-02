@@ -115,36 +115,43 @@ pipeline {
             }
         }
 
-        // stage('Install Tomcat & Nexus') {
-        //     steps {
-        //         script {
-        //             sh '''
-        //             ansible-playbook -i inventory setup.yml
-        //             '''
-        //         }
-        //     }
-        // }
 
-        // stage('Build Java Application') {
-        //     steps {
-        //         script {
-        //             sh '''
-        //             cd spring-boot-war-example
-        //             mvn clean install
-        //             '''
-        //         }
-        //     }
-        // }
+        stage('Install Tomcat & Nexus') {
+            steps {
+                script {
+                    sh '''
+                    ansible-playbook -i inventory setup.yml
+                    '''
+                }
+            }
+        }
 
-        // stage('Deploy Java Application') {
-        //     steps {
-        //         script {
-        //             sh '''
-        //             scp -i ~/.ssh/mujahed.pem spring-boot-war-example/target/*.war ubuntu@$(terraform output -raw tomcat_server_ip):/opt/apache-tomcat-9.0.99/webapps/
-        //             '''
-        //         }
-        //     }
-        // }
+        stage('Build Java Application') {
+            steps {
+                script {
+                    sh '''
+                    cd spring-boot-war-example
+                    mvn clean install
+                    '''
+                }
+            }
+        }
+
+        stage('Deploy Java Application') {
+            steps {
+                script {
+                    // Define the private key path dynamically
+                    def sshPrivateKey = "${SSH_PRIVATE_KEY_PATH}"
+                    def tomcatServerIp = sh(script: "terraform output -raw tomcat_server_ip", returnStdout: true).trim()
+        
+                    // SCP command to deploy the WAR file using the defined private key
+                    sh "scp -i ${sshPrivateKey} spring-boot-war-example/target/*.war ubuntu@${tomcatServerIp}:/opt/apache-tomcat-9.0.99/webapps/"
+                }
+            }
+        }
+        
+        
+        
     }
 
     post {
