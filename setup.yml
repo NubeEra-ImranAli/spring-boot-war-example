@@ -1,5 +1,4 @@
 - name: Install Tomcat and Nexus
-  hosts: all
   become: yes
   tasks:
     - name: Install Java
@@ -24,6 +23,34 @@
         - name: Rename Tomcat directory
           command:
             cmd: mv /opt/apache-tomcat-9.0.99 /opt/tomcat
+
+        - name: Set ownership of Tomcat directory
+          command:
+            cmd: chown -R ubuntu:ubuntu /opt/tomcat
+
+        - name: Modify server.xml to change Connector port
+          lineinfile:
+            path: /opt/tomcat/conf/server.xml
+            regexp: '(<Connector port=")(\d+)(" protocol="HTTP/1.1")'
+            line: '<Connector port="8888" protocol="HTTP/1.1" connectionTimeout="20000" redirectPort="8443" />'
+
+        - name: Modify context.xml to update RemoteAddrValve
+          lineinfile:
+            path: /opt/tomcat/conf/context.xml
+            regexp: '(<Valve className="org.apache.catalina.valves.RemoteAddrValve" allow="127\.\d+\.\d+\.\d+|::1|0:0:0:0:0:0:0:1" />)'
+            line: '<Valve className="org.apache.catalina.valves.RemoteAddrValve" allow=".*" />'
+
+        - name: Modify tomcat-users.xml to add roles and user
+          blockinfile:
+            path: /opt/tomcat/conf/tomcat-users.xml
+            marker: "<!-- BEGIN TOMCAT USERS -->"
+            block: |
+              <tomcat-users>
+                  <role rolename="manager-gui"/>
+                  <role rolename="admin-gui"/>
+                  <role rolename="manager-script"/>
+                  <user username="admin" password="admin123" roles="manager-gui,admin-gui,manager-script"/>
+              </tomcat-users>
 
         - name: Create systemd service file for Tomcat
           copy:
