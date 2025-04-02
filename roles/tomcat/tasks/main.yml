@@ -1,23 +1,67 @@
+- name: Install Java (only on tomcat_server)
+  when: "'tomcat_server' in group_names"
+  apt:
+    name: openjdk-17-jdk
+    state: present
+    
 - name: Download Tomcat
+  when: "'tomcat_server' in group_names"
   get_url:
     url: https://archive.apache.org/dist/tomcat/tomcat-9/v9.0.99/bin/apache-tomcat-9.0.99.tar.gz
     dest: /opt/tomcat.tar.gz
 
 - name: Extract Tomcat
+  when: "'tomcat_server' in group_names"
   unarchive:
     src: /opt/tomcat.tar.gz
     dest: /opt
     remote_src: yes
 
 - name: Rename Tomcat directory
+  when: "'tomcat_server' in group_names"
   command:
     cmd: mv /opt/apache-tomcat-9.0.99 /opt/tomcat
 
 - name: Set ownership of Tomcat directory
+  when: "'tomcat_server' in group_names"
   command:
     cmd: chown -R ubuntu:ubuntu /opt/tomcat
 
+- name: Modify server.xml to change Connector port
+  when: "'tomcat_server' in group_names"
+  lineinfile:
+    path: /opt/tomcat/conf/server.xml
+    regexp: '(<Connector port=")(\d+)(" protocol="HTTP/1.1")'
+    line: '<Connector port="8888" protocol="HTTP/1.1" connectionTimeout="20000" redirectPort="8443" />'
+
+- name: Modify context.xml to update RemoteAddrValve
+  when: "'tomcat_server' in group_names"
+  lineinfile:
+    path: /opt/tomcat/conf/context.xml
+    regexp: '(<Valve className="org.apache.catalina.valves.RemoteAddrValve" allow="127\.\d+\.\d+\.\d+|::1|0:0:0:0:0:0:0:1" />)'
+    line: '<Valve className="org.apache.catalina.valves.RemoteAddrValve" allow=".*" />'
+
+- name: Modify tomcat-users.xml to add roles and user
+  when: "'tomcat_server' in group_names"
+  blockinfile:
+    path: /opt/tomcat/conf/tomcat-users.xml
+    marker: "<!-- BEGIN TOMCAT USERS -->"
+    block: |
+      <tomcat-users>
+          <role rolename="manager-gui"/>
+          <role rolename="admin-gui"/>
+          <role rolename="manager-script"/>
+          <user username="admin" password="admin123" roles="manager-gui,admin-gui,manager-script"/>
+      </tomcat-users>
+
+- name: Copy WAR file to Tomcat's webapps directory
+  when: "'tomcat_server' in group_names"
+  copy:
+    src: /path/to/your/war/file.war
+    dest: /opt/tomcat/webapps/
+
 - name: Create systemd service file for Tomcat
+  when: "'tomcat_server' in group_names"
   copy:
     dest: /etc/systemd/system/tomcat.service
     content: |
@@ -40,6 +84,7 @@
       WantedBy=multi-user.target
 
 - name: Reload systemd and start Tomcat service
+  when: "'tomcat_server' in group_names"
   systemd:
     name: tomcat
     state: started
