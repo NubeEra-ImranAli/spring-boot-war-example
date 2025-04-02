@@ -64,9 +64,13 @@ pipeline {
                         "artifact_server": artifactServerIp
                     ]
         
-                    // Check if all servers are up and reachable
+                    // SSH user and private key path
+                    def sshUser = "ubuntu"  // Replace with your SSH user if it's different
+                    def sshPrivateKey = "${SSH_PRIVATE_KEY_PATH}"  // Use the path to your private key
+        
+                    // Check if all servers are up and reachable via SSH
                     def retries = 0
-                    def maxRetries = 30 // Maximum number of retries (e.g., 30 attempts)
+                    def maxRetries = 30  // Maximum number of retries (e.g., 30 attempts)
                     def waitTime = 10    // Wait time between retries (in seconds)
         
                     def reachableServers = [:]
@@ -77,31 +81,33 @@ pipeline {
                     while (reachableServers.containsValue(false) && retries < maxRetries) {
                         servers.each { serverName, ip ->
                             if (!reachableServers[serverName]) {
-                                // Ping the EC2 instance to check if it's available
-                                def result = sh(script: "ping -c 1 -w 5 ${ip}", returnStatus: true)
-                                
+                                // Try to SSH into the EC2 instance
+                                def result = sh(script: """
+                                    ssh -o BatchMode=yes -o StrictHostKeyChecking=no -i ${sshPrivateKey} ${sshUser}@${ip} 'echo SSH connected'
+                                """, returnStatus: true)
+        
                                 if (result == 0) {
-                                    echo "${serverName} (${ip}) is reachable."
+                                    echo "${serverName} (${ip}) is reachable via SSH."
                                     reachableServers[serverName] = true
                                 } else {
-                                    echo "${serverName} (${ip}) is not reachable yet. Retrying."
+                                    echo "${serverName} (${ip}) is not reachable via SSH yet. Retrying."
                                 }
                             }
                         }
         
                         if (reachableServers.containsValue(false)) {
                             retries++
-                            echo "Attempt ${retries}/${maxRetries} failed. Waiting for all servers to be reachable."
+                            echo "Attempt ${retries}/${maxRetries} failed. Waiting for all servers to be reachable via SSH."
                             sleep(waitTime)
                         }
                     }
         
                     if (reachableServers.containsValue(false)) {
-                        error "Some EC2 instances are not reachable after ${maxRetries} attempts."
+                        error "Some EC2 instances are not reachable via SSH after ${maxRetries} attempts."
                     }
         
                     // Once all instances are reachable, run the Ansible ping
-                    echo "All servers are reachable. Running Ansible Ping..."
+                    echo "All servers are reachable via SSH. Running Ansible Ping..."
                     sh """
                     ansible -i inventory all -m ping
                     """
