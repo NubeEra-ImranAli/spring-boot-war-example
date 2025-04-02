@@ -79,7 +79,7 @@ pipeline {
             steps {
                 script {
                     sh '''
-                    scp -i ~/.ssh/mujahed.pemspring-boot-war-example/target/*.war ubuntu@$(terraform output -raw tomcat_server_ip):/opt/apache-tomcat-9.0.99/webapps/
+                    scp -i ~/.ssh/mujahed.pem spring-boot-war-example/target/*.war ubuntu@$(terraform output -raw tomcat_server_ip):/opt/apache-tomcat-9.0.99/webapps/
                     '''
                 }
             }
