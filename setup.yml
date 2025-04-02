@@ -21,6 +21,38 @@
             dest: /opt
             remote_src: yes
 
+        - name: Rename Tomcat directory
+          command:
+            cmd: mv /opt/apache-tomcat-9.0.99 /opt/tomcat
+
+        - name: Create systemd service file for Tomcat
+          copy:
+            dest: /etc/systemd/system/tomcat.service
+            content: |
+              [Unit]
+              Description=Tomcat 9 servlet container
+              After=network.target
+
+              [Service]
+              Type=forking
+              ExecStart=/opt/tomcat/bin/startup.sh
+              ExecStop=/opt/tomcat/bin/shutdown.sh
+              User=root
+              Group=root
+              UMask=0007
+              RestartSec=10
+              Restart=always
+              LimitNOFILE=4096
+
+              [Install]
+              WantedBy=multi-user.target
+
+        - name: Reload systemd and start Tomcat service
+          systemd:
+            name: tomcat
+            state: started
+            enabled: yes
+
     - name: Install Nexus
       when: "'artifact_server' in group_names"
       block:
@@ -34,3 +66,35 @@
             src: /opt/nexus.tar.gz
             dest: /opt
             remote_src: yes
+
+        - name: Rename Nexus directory
+          command:
+            cmd: mv /opt/nexus-3.78.2-04 /opt/nexus
+
+        - name: Create systemd service file for Nexus
+          copy:
+            dest: /etc/systemd/system/nexus.service
+            content: |
+              [Unit]
+              Description=Nexus Repository Manager
+              After=network.target
+
+              [Service]
+              Type=forking
+              ExecStart=/opt/nexus/bin/nexus start
+              ExecStop=/opt/nexus/bin/nexus stop
+              User=root
+              Group=root
+              UMask=0007
+              RestartSec=10
+              Restart=always
+              LimitNOFILE=4096
+
+              [Install]
+              WantedBy=multi-user.target
+
+        - name: Reload systemd and start Nexus service
+          systemd:
+            name: nexus
+            state: started
+            enabled: yes
