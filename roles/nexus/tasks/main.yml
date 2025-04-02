@@ -49,4 +49,4 @@
 - name: Setup Nexus Repository
   when: "'artifact_server' in group_names"
   command:
-    cmd: "/opt/nexus/bin/nexus repo create -r hosted -n my-repo -c war"
+    cmd: "bash -c '/opt/nexus/bin/nexus repo create -r hosted -n my-repo -c war'"
