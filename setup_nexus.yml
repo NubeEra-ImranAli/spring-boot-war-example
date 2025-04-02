@@ -1,4 +1,4 @@
-- name: Install Tomcat and Nexus
+- name: Install Nexus
   hosts: all
   become: yes
   tasks:
