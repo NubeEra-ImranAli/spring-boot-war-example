@@ -1,19 +1,23 @@
 - name: Download Nexus
+  when: "'artifact_server' in group_names"
   get_url:
     url: https://download.sonatype.com/nexus/3/nexus-unix-x86-64-3.78.2-04.tar.gz
     dest: /opt/nexus.tar.gz
 
 - name: Extract Nexus
+  when: "'artifact_server' in group_names"
   unarchive:
     src: /opt/nexus.tar.gz
     dest: /opt
     remote_src: yes
 
 - name: Rename Nexus directory
+  when: "'artifact_server' in group_names"
   command:
     cmd: mv /opt/nexus-3.78.2-04 /opt/nexus
 
 - name: Create systemd service file for Nexus
+  when: "'artifact_server' in group_names"
   copy:
     dest: /etc/systemd/system/nexus.service
     content: |
@@ -36,7 +40,13 @@
       WantedBy=multi-user.target
 
 - name: Reload systemd and start Nexus service
+  when: "'artifact_server' in group_names"
   systemd:
     name: nexus
     state: started
     enabled: yes
+
+- name: Setup Nexus Repository
+  when: "'artifact_server' in group_names"
+  command:
+    cmd: "/opt/nexus/bin/nexus repo create -r hosted -n my-repo -c war"
