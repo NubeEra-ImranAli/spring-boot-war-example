@@ -36,10 +36,6 @@ pipeline {
                 script {
                     // Generate the inventory for all servers (build_server, tomcat_server, artifact_server)
                     sh """
-                    // echo "[build_server]" > inventory
-                    // echo "\$(terraform output -raw build_server_ip) ansible_user=ubuntu ansible_ssh_private_key_file=${SSH_PRIVATE_KEY_PATH} ansible_ssh_common_args='-o StrictHostKeyChecking=no'" >> inventory
-
-
                     echo "[build_server]" > inventory
                      echo "\$(terraform output -raw build_server_ip) ansible_user=ubuntu ansible_ssh_private_key_file=${SSH_PRIVATE_KEY_PATH} ansible_ssh_common_args='-o StrictHostKeyChecking=no'" >> inventory
  
