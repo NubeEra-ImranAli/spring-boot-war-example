@@ -43,16 +43,44 @@ pipeline {
             }
         }
 
-        // stage('Verify Ansible Connectivity') {
-        //     steps {
-        //         script {
-        //             sh '''
-        //             pwd
-        //             ansible -i inventory all -m ping
-        //             '''
-        //         }
-        //     }
-        // }
+        stage('Verify Ansible Connectivity') {
+            steps {
+                script {
+                    // Get the IP address of the EC2 instance created by Terraform
+                    def buildServerIp = sh(script: "terraform output -raw build_server_ip", returnStdout: true).trim()
+        
+                    // Check if the EC2 instance is up and reachable
+                    def reachable = false
+                    def retries = 0
+                    def maxRetries = 30 // Maximum number of retries (e.g., 30 attempts)
+                    def waitTime = 10    // Wait time between retries (in seconds)
+        
+                    while (!reachable && retries < maxRetries) {
+                        // Ping the EC2 instance to check if it's available
+                        def result = sh(script: "ping -c 1 -w 5 ${buildServerIp}", returnStatus: true)
+                        
+                        if (result == 0) {
+                            echo "EC2 instance ${buildServerIp} is reachable."
+                            reachable = true
+                        } else {
+                            retries++
+                            echo "Attempt ${retries}/${maxRetries} failed. Waiting for EC2 instance to be reachable."
+                            sleep(waitTime)
+                        }
+                    }
+        
+                    if (!reachable) {
+                        error "EC2 instance ${buildServerIp} is not reachable after ${maxRetries} attempts."
+                    }
+        
+                    // Once the instance is reachable, run the Ansible ping
+                    echo "Running Ansible Ping..."
+                    sh """
+                    ansible -i inventory all -m ping
+                    """
+                }
+            }
+        }
 
         // stage('Install Tomcat & Nexus') {
         //     steps {
