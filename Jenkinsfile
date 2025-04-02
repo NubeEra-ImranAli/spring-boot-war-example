@@ -46,35 +46,56 @@ pipeline {
         stage('Verify Ansible Connectivity') {
             steps {
                 script {
-                    // Get the IP address of the EC2 instance created by Terraform
+                    // Get the IP addresses of the EC2 instances created by Terraform
                     def buildServerIp = sh(script: "terraform output -raw build_server_ip", returnStdout: true).trim()
+                    def tomcatServerIp = sh(script: "terraform output -raw tomcat_server_ip", returnStdout: true).trim()
+                    def artifactServerIp = sh(script: "terraform output -raw artifact_server_ip", returnStdout: true).trim()
         
-                    // Check if the EC2 instance is up and reachable
-                    def reachable = false
+                    // Define the servers and their IPs in a map
+                    def servers = [
+                        "build_server": buildServerIp,
+                        "tomcat_server": tomcatServerIp,
+                        "artifact_server": artifactServerIp
+                    ]
+        
+                    // Check if all servers are up and reachable
                     def retries = 0
                     def maxRetries = 30 // Maximum number of retries (e.g., 30 attempts)
                     def waitTime = 10    // Wait time between retries (in seconds)
         
-                    while (!reachable && retries < maxRetries) {
-                        // Ping the EC2 instance to check if it's available
-                        def result = sh(script: "ping -c 1 -w 5 ${buildServerIp}", returnStatus: true)
-                        
-                        if (result == 0) {
-                            echo "EC2 instance ${buildServerIp} is reachable."
-                            reachable = true
-                        } else {
+                    def reachableServers = [:]
+                    servers.each { serverName, ip ->
+                        reachableServers[serverName] = false
+                    }
+        
+                    while (reachableServers.containsValue(false) && retries < maxRetries) {
+                        servers.each { serverName, ip ->
+                            if (!reachableServers[serverName]) {
+                                // Ping the EC2 instance to check if it's available
+                                def result = sh(script: "ping -c 1 -w 5 ${ip}", returnStatus: true)
+                                
+                                if (result == 0) {
+                                    echo "${serverName} (${ip}) is reachable."
+                                    reachableServers[serverName] = true
+                                } else {
+                                    echo "${serverName} (${ip}) is not reachable yet. Retrying."
+                                }
+                            }
+                        }
+        
+                        if (reachableServers.containsValue(false)) {
                             retries++
-                            echo "Attempt ${retries}/${maxRetries} failed. Waiting for EC2 instance to be reachable."
+                            echo "Attempt ${retries}/${maxRetries} failed. Waiting for all servers to be reachable."
                             sleep(waitTime)
                         }
                     }
         
-                    if (!reachable) {
-                        error "EC2 instance ${buildServerIp} is not reachable after ${maxRetries} attempts."
+                    if (reachableServers.containsValue(false)) {
+                        error "Some EC2 instances are not reachable after ${maxRetries} attempts."
                     }
         
-                    // Once the instance is reachable, run the Ansible ping
-                    echo "Running Ansible Ping..."
+                    // Once all instances are reachable, run the Ansible ping
+                    echo "All servers are reachable. Running Ansible Ping..."
                     sh """
                     ansible -i inventory all -m ping
                     """
