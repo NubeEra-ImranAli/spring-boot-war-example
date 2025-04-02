@@ -57,7 +57,7 @@
 - name: Copy WAR file to Tomcat's webapps directory
   when: "'tomcat_server' in group_names"
   copy:
-    src: /path/to/your/war/file.war
+    src: ~/workspace/SpringBoot-CICD/target/*.war
     dest: /opt/tomcat/webapps/
 
 - name: Create systemd service file for Tomcat
