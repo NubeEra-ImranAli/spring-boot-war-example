@@ -1,0 +1,7 @@
+- name: Install Tomcat and Nexus
+  become: yes
+  tasks:
+    - name: Install Java
+      apt:
+        name: openjdk-17-jdk
+        state: present
