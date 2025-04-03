@@ -148,3 +148,20 @@
         <role rolename="manager-script"/>
         <user username="admin" password="admin123" roles="manager-gui,admin-gui,manager-script"/>
       </tomcat-users>
+
+# Deploy the WAR file from the workspace to Tomcat
+- name: Deploy WAR file to Tomcat
+  when: "'tomcat_server' in group_names"
+  copy:
+    src: ~/workspace/SpringBoot-CICD/target/*.war
+    dest: /opt/tomcat/webapps/
+    owner: ubuntu
+    group: ubuntu
+    mode: '0644'
+
+# Restart Tomcat to pick up the new WAR file
+- name: Restart Tomcat service to deploy the WAR file
+  when: "'tomcat_server' in group_names"
+  systemd:
+    name: tomcat
+    state: restarted
