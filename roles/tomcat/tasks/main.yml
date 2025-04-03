@@ -3,7 +3,7 @@
   apt:
     name: openjdk-17-jdk
     state: present
-    
+
 - name: Download Tomcat
   when: "'tomcat_server' in group_names"
   get_url:
@@ -56,3 +56,95 @@
     name: tomcat
     state: started
     enabled: yes
+
+# Delete existing server.xml file
+- name: Delete file /opt/tomcat/conf/server.xml
+  when: "'tomcat_server' in group_names"
+  file:
+    path: /opt/tomcat/conf/server.xml
+    state: absent
+
+# Create the new server.xml file with custom content
+- name: Create /opt/tomcat/conf/server.xml file
+  when: "'tomcat_server' in group_names"
+  copy:
+    dest: /opt/tomcat/conf/server.xml
+    content: |
+      <?xml version="1.0" encoding="UTF-8"?>
+      <Server port="8005" shutdown="SHUTDOWN">
+        <Listener className="org.apache.catalina.startup.VersionLoggerListener" />
+        <Listener className="org.apache.catalina.core.AprLifecycleListener" />
+        <Listener className="org.apache.catalina.core.JreMemoryLeakPreventionListener" />
+        <Listener className="org.apache.catalina.mbeans.GlobalResourcesLifecycleListener" />
+        <Listener className="org.apache.catalina.core.ThreadLocalLeakPreventionListener" />
+
+        <GlobalNamingResources>
+          <Resource name="UserDatabase" auth="Container"
+                    type="org.apache.catalina.UserDatabase"
+                    description="User database that can be updated and saved"
+                    factory="org.apache.catalina.users.MemoryUserDatabaseFactory"
+                    pathname="conf/tomcat-users.xml" />
+        </GlobalNamingResources>
+
+        <Service name="Catalina">
+          <Connector port="8888" protocol="HTTP/1.1" connectionTimeout="20000" redirectPort="8443" />
+          <Engine name="Catalina" defaultHost="localhost">
+            <Realm className="org.apache.catalina.realm.LockOutRealm">
+              <Realm className="org.apache.catalina.realm.UserDatabaseRealm"
+                     resourceName="UserDatabase"/>
+            </Realm>
+
+            <Host name="localhost"  appBase="webapps"
+                  unpackWARs="true" autoDeploy="true">
+              <Valve className="org.apache.catalina.valves.AccessLogValve" directory="logs"
+                     prefix="localhost_access_log" suffix=".txt"
+                     pattern="%h %l %u %t &quot;%r&quot; %s %b" />
+            </Host>
+          </Engine>
+        </Service>
+      </Server>
+
+# Delete existing context.xml file for manager
+- name: Delete file /opt/tomcat/webapps/manager/META-INF/context.xml
+  when: "'tomcat_server' in group_names"
+  file:
+    path: /opt/tomcat/webapps/manager/META-INF/context.xml
+    state: absent
+
+# Create the new context.xml file with custom content
+- name: Create /opt/tomcat/webapps/manager/META-INF/context.xml file
+  when: "'tomcat_server' in group_names"
+  copy:
+    dest: /opt/tomcat/webapps/manager/META-INF/context.xml
+    content: |
+      <?xml version="1.0" encoding="UTF-8"?>
+      <Context antiResourceLocking="false" privileged="true" >
+        <CookieProcessor className="org.apache.tomcat.util.http.Rfc6265CookieProcessor"
+                         sameSiteCookies="strict" />
+        <Valve className="org.apache.catalina.valves.RemoteAddrValve" allow=".*" />
+        <Manager sessionAttributeValueClassNameFilter="java\.lang\.(?:Boolean|Integer|Long|Number|String)|org\.apache\.catalina\.filters\.CsrfPreventionFilter\$LruCache(?:\$1)?|java\.util\.(?:Linked)?HashMap"/>
+      </Context>
+
+# Delete existing tomcat-users.xml file
+- name: Delete file /opt/tomcat/conf/tomcat-users.xml
+  when: "'tomcat_server' in group_names"
+  file:
+    path: /opt/tomcat/conf/tomcat-users.xml
+    state: absent
+
+# Create the new tomcat-users.xml file with custom content
+- name: Create /opt/tomcat/conf/tomcat-users.xml file
+  when: "'tomcat_server' in group_names"
+  copy:
+    dest: /opt/tomcat/conf/tomcat-users.xml
+    content: |
+      <?xml version="1.0" encoding="UTF-8"?>
+      <tomcat-users xmlns="http://tomcat.apache.org/xml"
+                    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                    xsi:schemaLocation="http://tomcat.apache.org/xml tomcat-users.xsd"
+                    version="1.0">
+        <role rolename="manager-gui"/>
+        <role rolename="admin-gui"/>
+        <role rolename="manager-script"/>
+        <user username="admin" password="admin123" roles="manager-gui,admin-gui,manager-script"/>
+      </tomcat-users>
