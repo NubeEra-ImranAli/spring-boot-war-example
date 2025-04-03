@@ -16,7 +16,6 @@
   command:
     cmd: mv /opt/nexus-3.78.2-04 /opt/nexus
 
-# Create nexus user and group
 - name: Create nexus user and group
   when: "'artifact_server' in group_names"
   user:
@@ -29,7 +28,6 @@
   command:
     cmd: chown -R nexus:nexus /opt/nexus
 
-# Create systemd service file for Nexus
 - name: Create systemd service file for Nexus
   when: "'artifact_server' in group_names"
   copy:
@@ -63,4 +61,4 @@
 - name: Setup Nexus Repository
   when: "'artifact_server' in group_names"
   command:
-    cmd: "bash -c '/opt/nexus/bin/nexus repo create -r hosted -n my-repo -c war'"
+    cmd: "sudo -u nexus /opt/nexus/bin/nexus repo create -r hosted -n my-repo -c war"
