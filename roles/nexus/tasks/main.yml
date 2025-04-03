@@ -16,6 +16,20 @@
   command:
     cmd: mv /opt/nexus-3.78.2-04 /opt/nexus
 
+# Create nexus user and group
+- name: Create nexus user and group
+  when: "'artifact_server' in group_names"
+  user:
+    name: nexus
+    shell: /bin/bash
+    state: present
+
+- name: Set ownership of Nexus directory
+  when: "'artifact_server' in group_names"
+  command:
+    cmd: chown -R nexus:nexus /opt/nexus
+
+# Create systemd service file for Nexus
 - name: Create systemd service file for Nexus
   when: "'artifact_server' in group_names"
   copy:
@@ -29,8 +43,8 @@
       Type=forking
       ExecStart=/opt/nexus/bin/nexus start
       ExecStop=/opt/nexus/bin/nexus stop
-      User=root
-      Group=root
+      User=nexus
+      Group=nexus
       UMask=0007
       RestartSec=10
       Restart=always
