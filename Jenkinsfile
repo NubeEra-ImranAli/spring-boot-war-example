@@ -110,17 +110,6 @@ pipeline {
             }
         }
 
-
-        stage('Install Tomcat & Nexus') {
-            steps {
-                script {
-                    sh '''
-                    ansible-playbook -i inventory setup.yml
-                    '''
-                }
-            }
-        }
-
         stage('Build Java Application') {
             steps {
                 script {
@@ -131,6 +120,17 @@ pipeline {
                 }
             }
         }
+        stage('Install Tomcat & Nexus') {
+            steps {
+                script {
+                    sh '''
+                    ansible-playbook -i inventory setup.yml
+                    '''
+                }
+            }
+        }
+
+        
 
         stage('Deploy Java Application') {
             steps {
