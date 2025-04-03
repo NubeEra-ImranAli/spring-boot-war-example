@@ -36,10 +36,7 @@ pipeline {
                 script {
                     // Generate the inventory for all servers (build_server, tomcat_server, artifact_server)
                     sh """
-                    echo "[build_server]" > inventory
-                     echo "\$(terraform output -raw build_server_ip) ansible_user=ubuntu ansible_ssh_private_key_file=${SSH_PRIVATE_KEY_PATH} ansible_ssh_common_args='-o StrictHostKeyChecking=no'" >> inventory
- 
-                     echo "[tomcat_server]" >> inventory
+                     echo "[tomcat_server]" > inventory
                      echo "\$(terraform output -raw tomcat_server_ip) ansible_user=ubuntu ansible_ssh_private_key_file=${SSH_PRIVATE_KEY_PATH} ansible_ssh_common_args='-o StrictHostKeyChecking=no'" >> inventory
  
                      echo "[artifact_server]" >> inventory
@@ -53,13 +50,11 @@ pipeline {
             steps {
                 script {
                     // Get the IP addresses of the EC2 instances created by Terraform
-                    def buildServerIp = sh(script: "terraform output -raw build_server_ip", returnStdout: true).trim()
                     def tomcatServerIp = sh(script: "terraform output -raw tomcat_server_ip", returnStdout: true).trim()
                     def artifactServerIp = sh(script: "terraform output -raw artifact_server_ip", returnStdout: true).trim()
         
                     // Define the servers and their IPs in a map
                     def servers = [
-                        "build_server": buildServerIp,
                         "tomcat_server": tomcatServerIp,
                         "artifact_server": artifactServerIp
                     ]
@@ -130,7 +125,7 @@ pipeline {
             steps {
                 script {
                     sh '''
-                    cd spring-boot-war-example
+                    cd ~/workspace/SpringBoot-CICD
                     mvn clean install
                     '''
                 }
@@ -145,7 +140,7 @@ pipeline {
                     def tomcatServerIp = sh(script: "terraform output -raw tomcat_server_ip", returnStdout: true).trim()
         
                     // SCP command to deploy the WAR file using the defined private key
-                    sh "scp -i ${sshPrivateKey} spring-boot-war-example/target/*.war ubuntu@${tomcatServerIp}:/opt/apache-tomcat-9.0.99/webapps/"
+                    sh "scp -i ${sshPrivateKey} ~/workspace/SpringBoot-CICD/target/*.war ubuntu@${tomcatServerIp}:/opt/tomcat/webapps/"
                 }
             }
         }
