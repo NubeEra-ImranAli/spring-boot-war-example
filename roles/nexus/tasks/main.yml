@@ -1,64 +1,71 @@
-- name: Download Nexus
+# Check if Nexus is installed
+- name: Check if Nexus is installed
   when: "'artifact_server' in group_names"
-  get_url:
-    url: https://download.sonatype.com/nexus/3/nexus-unix-x86-64-3.78.2-04.tar.gz
-    dest: /opt/nexus.tar.gz
+  stat:
+    path: /opt/nexus
+  register: nexus_stat
 
-- name: Extract Nexus
-  when: "'artifact_server' in group_names"
-  unarchive:
-    src: /opt/nexus.tar.gz
-    dest: /opt
-    remote_src: yes
+# Only install Nexus if it is not installed
+- name: Install Nexus (if not installed)
+  when: "'artifact_server' in group_names and not nexus_stat.stat.exists"
+  block:
+    - name: Download Nexus
+      get_url:
+        url: https://download.sonatype.com/nexus/3/nexus-unix-x86-64-3.78.2-04.tar.gz
+        dest: /opt/nexus.tar.gz
 
-- name: Rename Nexus directory
-  when: "'artifact_server' in group_names"
-  command:
-    cmd: mv /opt/nexus-3.78.2-04 /opt/nexus
+    - name: Extract Nexus
+      unarchive:
+        src: /opt/nexus.tar.gz
+        dest: /opt
+        remote_src: yes
 
-- name: Create nexus user and group
-  when: "'artifact_server' in group_names"
-  user:
-    name: nexus
-    shell: /bin/bash
-    state: present
+    - name: Rename Nexus directory
+      command:
+        cmd: mv /opt/nexus-3.78.2-04 /opt/nexus
 
-- name: Set ownership of Nexus directory
-  when: "'artifact_server' in group_names"
-  command:
-    cmd: chown -R nexus:nexus /opt/nexus
+    - name: Create nexus user and group
+      user:
+        name: nexus
+        shell: /bin/bash
+        state: present
 
-- name: Create systemd service file for Nexus
-  when: "'artifact_server' in group_names"
-  copy:
-    dest: /etc/systemd/system/nexus.service
-    content: |
-      [Unit]
-      Description=Nexus Repository Manager
-      After=network.target
+    - name: Set ownership of Nexus directory
+      command:
+        cmd: chown -R nexus:nexus /opt/nexus
 
-      [Service]
-      Type=forking
-      ExecStart=/opt/nexus/bin/nexus start
-      ExecStop=/opt/nexus/bin/nexus stop
-      User=nexus
-      Group=nexus
-      UMask=0007
-      RestartSec=10
-      Restart=always
-      LimitNOFILE=4096
+    - name: Create systemd service file for Nexus
+      copy:
+        dest: /etc/systemd/system/nexus.service
+        content: |
+          [Unit]
+          Description=Nexus Repository Manager
+          After=network.target
 
-      [Install]
-      WantedBy=multi-user.target
+          [Service]
+          Type=forking
+          ExecStart=/opt/nexus/bin/nexus start
+          ExecStop=/opt/nexus/bin/nexus stop
+          User=nexus
+          Group=nexus
+          UMask=0007
+          RestartSec=10
+          Restart=always
+          LimitNOFILE=4096
 
-- name: Reload systemd and start Nexus service
-  when: "'artifact_server' in group_names"
+          [Install]
+          WantedBy=multi-user.target
+
+    - name: Reload systemd and start Nexus service
+      systemd:
+        name: nexus
+        state: started
+        enabled: yes
+
+# If Nexus is already installed, just ensure it's running
+- name: Ensure Nexus service is running (if Nexus was already installed)
+  when: "'artifact_server' in group_names and nexus_stat.stat.exists"
   systemd:
     name: nexus
     state: started
     enabled: yes
-
-# - name: Setup Nexus Repository
-#   when: "'artifact_server' in group_names"
-#   command:
-#     cmd: "sudo -u nexus /opt/nexus/bin/nexus repo create -r hosted -n my-repo -c war"
