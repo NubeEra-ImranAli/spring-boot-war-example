@@ -58,7 +58,7 @@
     state: started
     enabled: yes
 
-- name: Setup Nexus Repository
-  when: "'artifact_server' in group_names"
-  command:
-    cmd: "sudo -u nexus /opt/nexus/bin/nexus repo create -r hosted -n my-repo -c war"
+# - name: Setup Nexus Repository
+#   when: "'artifact_server' in group_names"
+#   command:
+#     cmd: "sudo -u nexus /opt/nexus/bin/nexus repo create -r hosted -n my-repo -c war"
