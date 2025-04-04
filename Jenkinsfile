@@ -8,7 +8,7 @@ pipeline {
         maven 'mmvvnn'      // This uses the tool with the name 'maven'
     }
     environment {
-        AWS_ACCESS_KEY = credentials('AWS_ACCESS')
+        AWS_ACCESS_KEY = credentials('AWS_KEY')
         AWS_SECRET_KEY = credentials('AWS_SECRET')
         SSH_PRIVATE_KEY_PATH = "~/.ssh/mujahed.pem"  // Path to your private key
     }
@@ -144,7 +144,6 @@ pipeline {
                 }
             }
         }
-        
         
         
     }
