@@ -1,70 +1,90 @@
-- name: Install Java (only on tomcat_server)
+# Check if Java is installed
+- name: Check if Java is installed
   when: "'tomcat_server' in group_names"
+  command: java -version
+  register: java_version
+  ignore_errors: yes
+
+# Install Java if not installed
+- name: Install Java (only on tomcat_server if not installed)
+  when: "'tomcat_server' in group_names and java_version.failed"
   apt:
     name: openjdk-17-jdk
     state: present
 
-- name: Download Tomcat
+# Check if Tomcat is installed
+- name: Check if Tomcat is installed
   when: "'tomcat_server' in group_names"
-  get_url:
-    url: https://archive.apache.org/dist/tomcat/tomcat-9/v9.0.99/bin/apache-tomcat-9.0.99.tar.gz
-    dest: /opt/tomcat.tar.gz
+  stat:
+    path: /opt/tomcat
+  register: tomcat_stat
 
-- name: Extract Tomcat
-  when: "'tomcat_server' in group_names"
-  unarchive:
-    src: /opt/tomcat.tar.gz
-    dest: /opt
-    remote_src: yes
+# Only install Tomcat if it's not installed
+- name: Install Tomcat (if not installed)
+  when: "'tomcat_server' in group_names and not tomcat_stat.stat.exists"
+  block:
+    - name: Download Tomcat
+      get_url:
+        url: https://archive.apache.org/dist/tomcat/tomcat-9/v9.0.99/bin/apache-tomcat-9.0.99.tar.gz
+        dest: /opt/tomcat.tar.gz
 
-- name: Rename Tomcat directory
-  when: "'tomcat_server' in group_names"
-  command:
-    cmd: mv /opt/apache-tomcat-9.0.99 /opt/tomcat
+    - name: Extract Tomcat
+      unarchive:
+        src: /opt/tomcat.tar.gz
+        dest: /opt
+        remote_src: yes
 
-- name: Set ownership of Tomcat directory
-  when: "'tomcat_server' in group_names"
-  command:
-    cmd: chown -R ubuntu:ubuntu /opt/tomcat
+    - name: Rename Tomcat directory
+      command:
+        cmd: mv /opt/apache-tomcat-9.0.99 /opt/tomcat
 
-- name: Create systemd service file for Tomcat
-  when: "'tomcat_server' in group_names"
-  copy:
-    dest: /etc/systemd/system/tomcat.service
-    content: |
-      [Unit]
-      Description=Tomcat 9 servlet container
-      After=network.target
+    - name: Set ownership of Tomcat directory
+      command:
+        cmd: chown -R ubuntu:ubuntu /opt/tomcat
 
-      [Service]
-      Type=forking
-      ExecStart=/opt/tomcat/bin/startup.sh
-      ExecStop=/opt/tomcat/bin/shutdown.sh
-      User=root
-      Group=root
-      UMask=0007
-      RestartSec=10
-      Restart=always
-      LimitNOFILE=4096
+    - name: Create systemd service file for Tomcat
+      copy:
+        dest: /etc/systemd/system/tomcat.service
+        content: |
+          [Unit]
+          Description=Tomcat 9 servlet container
+          After=network.target
 
-      [Install]
-      WantedBy=multi-user.target
+          [Service]
+          Type=forking
+          ExecStart=/opt/tomcat/bin/startup.sh
+          ExecStop=/opt/tomcat/bin/shutdown.sh
+          User=root
+          Group=root
+          UMask=0007
+          RestartSec=10
+          Restart=always
+          LimitNOFILE=4096
 
-- name: Reload systemd and start Tomcat service
-  when: "'tomcat_server' in group_names"
+          [Install]
+          WantedBy=multi-user.target
+
+    - name: Reload systemd and start Tomcat service
+      systemd:
+        name: tomcat
+        state: started
+        enabled: yes
+
+# Restart Tomcat service to apply changes (if Tomcat was already installed)
+- name: Restart Tomcat service to apply changes (if Tomcat was installed)
+  when: "'tomcat_server' in group_names and tomcat_stat.stat.exists"
   systemd:
     name: tomcat
-    state: started
-    enabled: yes
+    state: restarted
 
-# Delete existing server.xml file
+# Continue with the rest of the tasks for deleting and creating custom configuration files...
+
 - name: Delete file /opt/tomcat/conf/server.xml
   when: "'tomcat_server' in group_names"
   file:
     path: /opt/tomcat/conf/server.xml
     state: absent
 
-# Create the new server.xml file with custom content
 - name: Create /opt/tomcat/conf/server.xml file
   when: "'tomcat_server' in group_names"
   copy:
@@ -148,20 +168,3 @@
         <role rolename="manager-script"/>
         <user username="admin" password="admin123" roles="manager-gui,admin-gui,manager-script"/>
       </tomcat-users>
-
-# Deploy the WAR file from the workspace to Tomcat
-# - name: Deploy WAR file to Tomcat
-#   when: "'tomcat_server' in group_names"
-#   copy:
-#     src: ~/workspace/SpringBoot-CICD/target/*.war
-#     dest: /opt/tomcat/webapps/
-#     owner: ubuntu
-#     group: ubuntu
-#     mode: '0644'
-
-# Restart Tomcat to pick up the new WAR file
-- name: Restart Tomcat service to deploy the WAR file
-  when: "'tomcat_server' in group_names"
-  systemd:
-    name: tomcat
-    state: restarted
