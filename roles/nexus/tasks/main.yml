@@ -28,6 +28,7 @@
       user:
         name: nexus
         shell: /bin/bash
+        password: "{{ 'nexus' | password_hash('sha512') }}"
         state: present
 
     - name: Set ownership of Nexus directory
