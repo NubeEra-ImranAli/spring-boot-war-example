@@ -1,53 +1,74 @@
+---
+# Define the variables
+vars:
+  nexus_version: "3.79.0-09"
+  nexus_install_dir: "/opt/nexus"
+  sonatype_work_dir: "/opt/sonatype-work"
+  nexus_user: "nexus"
+  nexus_group: "nexus"
+  nexus_tar_url: "https://download.sonatype.com/nexus/3/nexus-unix-x86-64-{{ nexus_version }}.tar.gz"
+
 # Check if Java is installed
 - name: Check if Java is installed
-  when: "'artifact_server' in group_names"
   command: java -version
   register: java_version
   ignore_errors: yes
 
 # Install Java if not installed
-- name: Install Java (only on artifact_server if not installed)
-  when: "'artifact_server' in group_names and java_version.failed"
+- name: Install Java (only if not installed)
+  when: java_version.failed
   apt:
     name: openjdk-17-jdk
     state: present
-    
+
 # Check if Nexus is installed
 - name: Check if Nexus is installed
-  when: "'artifact_server' in group_names"
   stat:
-    path: /opt/nexus
+    path: "{{ nexus_install_dir }}"
   register: nexus_stat
 
 # Only install Nexus if it is not installed
 - name: Install Nexus (if not installed)
-  when: "'artifact_server' in group_names and not nexus_stat.stat.exists"
+  when: not nexus_stat.stat.exists
   block:
+    - name: Ensure Nexus installation directory exists
+      file:
+        path: "{{ nexus_install_dir }}"
+        state: directory
+        owner: "{{ nexus_user }}"
+        group: "{{ nexus_group }}"
+        mode: '0755'
+
+    - name: Ensure Sonatype work directory exists
+      file:
+        path: "{{ sonatype_work_dir }}"
+        state: directory
+        owner: "{{ nexus_user }}"
+        group: "{{ nexus_group }}"
+        mode: '0755'
+
     - name: Download Nexus
       get_url:
-        url: https://download.sonatype.com/nexus/3/nexus-unix-x86-64-3.78.2-04.tar.gz
-        dest: /opt/nexus.tar.gz
+        url: "{{ nexus_tar_url }}"
+        dest: /tmp/nexus-{{ nexus_version }}.tar.gz
 
     - name: Extract Nexus
       unarchive:
-        src: /opt/nexus.tar.gz
+        src: "/tmp/nexus-{{ nexus_version }}.tar.gz"
         dest: /opt
         remote_src: yes
-
-    - name: Rename Nexus directory
-      command:
-        cmd: mv /opt/nexus-3.78.2-04 /opt/nexus
+        creates: "{{ nexus_install_dir }}/nexus"
 
     - name: Create nexus user and group
       user:
-        name: nexus
+        name: "{{ nexus_user }}"
         shell: /bin/bash
         password: "{{ 'nexus' | password_hash('sha512') }}"
         state: present
 
     - name: Set ownership of Nexus directory
       command:
-        cmd: chown -R nexus:nexus /opt/nexus
+        cmd: chown -R nexus:nexus {{ nexus_install_dir }}
 
     - name: Create systemd service file for Nexus
       copy:
@@ -59,8 +80,8 @@
 
           [Service]
           Type=forking
-          ExecStart=/opt/nexus/bin/nexus start
-          ExecStop=/opt/nexus/bin/nexus stop
+          ExecStart={{ nexus_install_dir }}/nexus/bin/nexus start
+          ExecStop={{ nexus_install_dir }}/nexus/bin/nexus stop
           User=nexus
           Group=nexus
           UMask=0007
@@ -79,7 +100,7 @@
 
 # If Nexus is already installed, just ensure it's running
 - name: Ensure Nexus service is running (if Nexus was already installed)
-  when: "'artifact_server' in group_names and nexus_stat.stat.exists"
+  when: nexus_stat.stat.exists
   systemd:
     name: nexus
     state: started
