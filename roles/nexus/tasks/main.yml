@@ -88,7 +88,7 @@
 
           [Install]
           WantedBy=multi-user.target
-      mode: '0644'  # Ensure correct file permissions
+        mode: '0644'  # Ensure the correct file permissions
 
     # Reload systemd to pick up Nexus service file
     - name: Reload systemd to pick up Nexus service file
