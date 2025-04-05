@@ -21,6 +21,13 @@
 - name: Install Nexus (if not installed)
   when: not nexus_stat.stat.exists
   block:
+    # Ensure the nexus user is created first
+    - name: Create nexus user and group
+      user:
+        name: nexus
+        shell: /bin/bash
+        password: "{{ 'nexus' | password_hash('sha512') }}"
+        state: present
     - name: Ensure Nexus installation directory exists
       file:
         path: /opt/nexus
