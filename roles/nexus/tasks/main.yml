@@ -1,3 +1,17 @@
+# Check if Java is installed
+- name: Check if Java is installed
+  when: "'artifact_server' in group_names"
+  command: java -version
+  register: java_version
+  ignore_errors: yes
+
+# Install Java if not installed
+- name: Install Java (only on artifact_server if not installed)
+  when: "'artifact_server' in group_names and java_version.failed"
+  apt:
+    name: openjdk-17-jdk
+    state: present
+    
 # Check if Nexus is installed
 - name: Check if Nexus is installed
   when: "'artifact_server' in group_names"
