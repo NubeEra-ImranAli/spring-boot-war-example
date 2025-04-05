@@ -4,4 +4,4 @@
   roles:
     - java
     - tomcat
-    - nexus
+    # - nexus
