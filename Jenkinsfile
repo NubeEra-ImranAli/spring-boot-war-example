@@ -38,9 +38,6 @@ pipeline {
                     sh """
                      echo "[tomcat_server]" > inventory
                      echo "\$(terraform output -raw tomcat_server_ip) ansible_user=ubuntu ansible_ssh_private_key_file=${SSH_PRIVATE_KEY_PATH} ansible_ssh_common_args='-o StrictHostKeyChecking=no'" >> inventory
- 
-                     echo "[artifact_server]" >> inventory
-                     echo "\$(terraform output -raw artifact_server_ip) ansible_user=ubuntu ansible_ssh_private_key_file=${SSH_PRIVATE_KEY_PATH} ansible_ssh_common_args='-o StrictHostKeyChecking=no'" >> inventory
                     """
                 }
             }
@@ -51,12 +48,10 @@ pipeline {
                 script {
                     // Get the IP addresses of the EC2 instances created by Terraform
                     def tomcatServerIp = sh(script: "terraform output -raw tomcat_server_ip", returnStdout: true).trim()
-                    def artifactServerIp = sh(script: "terraform output -raw artifact_server_ip", returnStdout: true).trim()
         
                     // Define the servers and their IPs in a map
                     def servers = [
-                        "tomcat_server": tomcatServerIp,
-                        "artifact_server": artifactServerIp
+                        "tomcat_server": tomcatServerIp
                     ]
         
                     // SSH user and private key path
