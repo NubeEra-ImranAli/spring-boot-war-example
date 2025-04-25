@@ -1,0 +1,104 @@
+trigger:
+- master  # Adjust this to your desired branch
+
+pool: 
+  name: Default
+
+variables:
+  AWS_ACCESS_KEY: ''  # Use Azure DevOps variable groups or pipeline variables
+  AWS_SECRET_KEY: ''
+  SSH_PRIVATE_KEY_PATH: '~/.ssh/mujahed.pem'  # Path to your private key
+
+stages:
+- stage: Checkout
+  jobs:
+  - job: CheckoutRepo
+    steps:
+    - checkout: self
+    - script: |
+        git clone https://github.com/NubeEra-ImranAli/spring-boot-war-example.git
+      displayName: 'Checkout Repository'
+
+- stage: SetupTerraform
+  jobs:
+  - job: Terraform
+    steps:
+    - script: |
+        terraform init
+        terraform apply -auto-approve
+      displayName: 'Setup Terraform'
+
+- stage: GenerateInventory
+  jobs:
+  - job: GenerateInventory
+    steps:
+    - script: |
+        echo "[tomcat_server]" > inventory
+        echo "$(terraform output -raw tomcat_server_ip) ansible_user=ubuntu ansible_ssh_private_key_file=${SSH_PRIVATE_KEY_PATH} ansible_ssh_common_args='-o StrictHostKeyChecking=no'" >> inventory
+      displayName: 'Generate Inventory'
+
+- stage: VerifyAnsibleConnectivity
+  jobs:
+  - job: VerifyConnectivity
+    steps:
+    - script: |
+        # Get the IP address of the EC2 instance created by Terraform
+        tomcatServerIp=$(terraform output -raw tomcat_server_ip)
+        
+        # Check if the server is reachable via SSH
+        sshUser ="ubuntu"
+        sshPrivateKey="${SSH_PRIVATE_KEY_PATH}"
+        
+        retries=0
+        maxRetries=30
+        waitTime=10
+        
+        while [ $retries -lt $maxRetries ]; do
+          ssh -o BatchMode=yes -o StrictHostKeyChecking=no -i ${sshPrivateKey} ${sshUser}@${tomcatServerIp} 'echo SSH connected' && break
+          echo "${tomcatServerIp} is not reachable via SSH yet. Retrying."
+          retries=$((retries + 1))
+          sleep ${waitTime}
+        done
+        
+        if [ $retries -eq $maxRetries ]; then
+          echo "EC2 instance is not reachable via SSH after ${maxRetries} attempts."
+          exit 1
+        fi
+        
+        echo "Server is reachable via SSH. Running Ansible Ping..."
+        ansible -i inventory all -m ping
+      displayName: 'Verify Ansible Connectivity'
+
+- stage: BuildJavaApplication
+  jobs:
+  - job: Build
+    steps:
+    - script: |
+        cd ~/workspace/SpringBoot-CICD
+        mvn clean install
+      displayName: 'Build Java Application'
+
+- stage: InstallTomcatAndNexus
+  jobs:
+  - job: Install
+    steps:
+    - script: |
+        ansible-playbook -i inventory setup.yml
+      displayName: 'Install Tomcat & Nexus'
+
+- stage: DeployJavaApplication
+  jobs:
+  - job: Deploy
+    steps:
+    - script: |
+        tomcatServerIp=$(terraform output -raw tomcat_server_ip)
+        scp -i ${SSH_PRIVATE_KEY_PATH} ~/workspace/SpringBoot-CICD/target/*.war ubuntu@${tomcatServerIp}:/opt/tomcat/webapps/
+      displayName: 'Deploy Java Application'
+
+- stage: PostDeployment
+  jobs:
+  - job: Post
+    steps:
+    - script: |
+        echo "Deployment Successful!"
+      displayName: 'Post Deployment Success'
