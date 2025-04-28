@@ -15,6 +15,12 @@ pipeline {
     }
 
     stages {
+        stage('Checkout Repository') {
+            steps {
+                git branch: 'master', url: 'https://github.com/NubeEra-ImranAli/spring-boot-war-example.git'
+            }
+        }
+
         stage('Setup Terraform') {
             steps {
                 script {
