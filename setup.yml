@@ -1,0 +1,12 @@
+- name: Install Java, Tomcat, and Nexus
+  hosts: all
+  become: yes
+  tasks:
+    - name: Update apt package cache
+      apt:
+        update_cache: yes
+
+  roles:
+    - java
+    - tomcat
+    # - nexus
