@@ -6,6 +6,7 @@ pipeline {
         terraform 'ttff'  // This uses the tool with the name 'terraform'
         ansible 'aann'      // This uses the tool with the name 'ansible'
         maven 'mmvvnn'      // This uses the tool with the name 'maven'
+        git 'ggiit'      // This uses the tool with the name 'maven'
     }
     environment {
         AWS_ACCESS_KEY = credentials('AWS_KEY')
