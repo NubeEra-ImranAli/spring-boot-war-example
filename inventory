@@ -1,4 +1,0 @@
-[tomcat_server]
-<Tomcat_Server_Public_IP> ansible_user=ubuntu
-[artifact_server]
-<Artifact_Server_Public_IP> ansible_user=ubuntu
